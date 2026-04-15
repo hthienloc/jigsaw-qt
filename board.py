@@ -52,9 +52,11 @@ class JigsawBoard(QGraphicsScene):
                                          Qt.AspectRatioMode.KeepAspectRatio, 
                                          Qt.TransformationMode.SmoothTransformation)
 
-        # Dynamic Grid Optimization: Calculate rows/cols based on target piece size
-        self.cols = max(2, round(self.image.width() / config.TARGET_PIECE_SIZE))
-        self.rows = max(2, round(self.image.height() / config.TARGET_PIECE_SIZE))
+        # Dynamic Grid Optimization: Distribute TARGET_PIECE_COUNT based on Aspect Ratio
+        img_aspect = self.image.width() / self.image.height()
+        # rows * (rows * aspect) = total => rows = sqrt(total / aspect)
+        self.rows = max(2, round(math.sqrt(config.TARGET_PIECE_COUNT / img_aspect)))
+        self.cols = max(2, round(config.TARGET_PIECE_COUNT / self.rows))
         
         w_piece = self.image.width() // self.cols
         h_piece = self.image.height() // self.rows
