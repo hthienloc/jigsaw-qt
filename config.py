@@ -11,6 +11,7 @@ BOARD_MARGIN_RATIO = 0.8  # Image takes 80% of board area
 TAB_SIZE_RATIO = 0.2      # Tab is 20% of piece size
 OVERSCAN_PADDING = 8      # Safety margin for anti-fringe
 SNAP_THRESHOLD = 30       # Manhattan distance for snapping
+TARGET_PIECE_SIZE = 200    # Optimal size for a puzzle piece
 
 # interaction & UI
 TRAY_SLOT_WIDTH = 120

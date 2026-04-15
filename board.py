@@ -42,22 +42,30 @@ class JigsawBoard(QGraphicsScene):
         
         self.clear()
         self.pieces = []
-        self.rows, self.cols = rows, cols
         
         original_img = QImage(image_path)
-        # Scale image to 80% of board area
-        target_w = self.board_rect.width() * config.BOARD_MARGIN_RATIO
-        target_h = self.board_rect.height() * config.BOARD_MARGIN_RATIO
-        self.image = original_img.scaled(int(target_w), int(target_h), 
+        
+        # Scale image to 80% of board area (pre-size calculation)
+        target_w_limit = self.board_rect.width() * config.BOARD_MARGIN_RATIO
+        target_h_limit = self.board_rect.height() * config.BOARD_MARGIN_RATIO
+        self.image = original_img.scaled(int(target_w_limit), int(target_h_limit), 
                                          Qt.AspectRatioMode.KeepAspectRatio, 
                                          Qt.TransformationMode.SmoothTransformation)
+
+        # Dynamic Grid Optimization: Calculate rows/cols based on target piece size
+        self.cols = max(2, round(self.image.width() / config.TARGET_PIECE_SIZE))
+        self.rows = max(2, round(self.image.height() / config.TARGET_PIECE_SIZE))
         
-        w_piece = self.image.width() // cols
-        h_piece = self.image.height() // rows
+        w_piece = self.image.width() // self.cols
+        h_piece = self.image.height() // self.rows
         board_offset = QPointF((self.board_rect.width() - self.image.width()) / 2,
                                (self.board_rect.height() - self.image.height()) / 2)
         
         tab_size = min(w_piece, h_piece) * config.TAB_SIZE_RATIO
+        
+        # Calculate optimal tray scale to fit slot width
+        dynamic_tray_scale = config.TRAY_SLOT_WIDTH / (w_piece + 2*tab_size)
+        dynamic_tray_scale = min(dynamic_tray_scale, 0.4) # Don't get too big
         
         # Generate stable tab directions
         h_tabs = [[random.choice([1, -1]) for _ in range(cols-1)] for _ in range(rows)]
@@ -103,6 +111,7 @@ class JigsawBoard(QGraphicsScene):
                 cy = int(r*h_piece - padding + board_offset.y())
                 
                 piece = JigsawPiece(QPixmap.fromImage(img_out), r, c, QPointF(cx, cy), mask_path)
+                piece.tray_scale = dynamic_tray_scale
                 piece.setTransformationMode(Qt.TransformationMode.SmoothTransformation)
                 self.addItem(piece)
                 self.pieces.append(piece)
