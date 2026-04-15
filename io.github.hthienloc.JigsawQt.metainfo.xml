@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.hthienloc.JigsawQt</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Jigsaw Qt</name>
+  <summary>A simple, casual jigsaw puzzle game</summary>
+  <description>
+    <p>
+      Jigsaw Qt is a simple puzzle game for the Linux desktop. 
+      It features clean image slicing, easy mouse-based controls, 
+      and a responsive UI that adapts to your window size.
+    </p>
+    <ul>
+      <li>Clean piece cutout with smooth edges</li>
+      <li>Simple piece snapping and clustering</li>
+      <li>Natural wheel-based tray scrolling</li>
+      <li>Supports custom image loading</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">io.github.hthienloc.JigsawQt.desktop</launchable>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="1.0.0" date="2026-04-16" />
+  </releases>
+</component>
+破

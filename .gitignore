@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.idea/
+.vscode/
+venv/
+.env
+*.egg-info/
+dist/
+build/
+*.bak
+破

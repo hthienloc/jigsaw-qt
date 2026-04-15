@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Jigsaw Qt
+Comment=A simple casual jigsaw puzzle game
+Exec=jigsaw-qt
+Icon=io.github.hthienloc.JigsawQt
+Terminal=false
+Type=Application
+Categories=Game;Puzzles;LogicGame;
+Keywords=puzzle;jigsaw;game;qt;
+StartupWMClass=jigsaw-qt
+X-Flatpak-RenamedFrom=jigsaw-qt.desktop;
