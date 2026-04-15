@@ -101,14 +101,18 @@ class JigsawApp(QMainWindow):
 
         h_layout.addStretch()
         
-        # Load sample thumbnails
-        self.samples_dir = "/home/loccun/.gemini/antigravity/brain/ce75c0c6-810e-4799-bde2-968a96776fe6/"
-        if os.path.exists(self.samples_dir):
-            samples = [f for f in os.listdir(self.samples_dir) if f.endswith(".png")]
-            for s in samples[:3]:
-                btn = ModernButton(f"SAMPLE {s.split('_')[0][-1]}")
-                btn.clicked.connect(lambda checked=False, img=s: self.load_sample(img))
-                h_layout.addWidget(btn)
+        # Look for samples in current directory
+        self.samples_dir = os.path.dirname(os.path.abspath(__file__))
+        samples = [f for f in os.listdir(self.samples_dir) if f.lower().endswith((".png", ".jpg"))]
+        # Filter for typical sample names or just show first 3
+        for s in samples[:5]:
+            if "_" in s:
+                label = s.split("_")[0].upper()
+            else:
+                label = s.upper()[:8]
+            btn = ModernButton(label)
+            btn.clicked.connect(lambda checked=False, img=s: self.load_sample(img))
+            h_layout.addWidget(btn)
 
         layout.addWidget(header)
 
