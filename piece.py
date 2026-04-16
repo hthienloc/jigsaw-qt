@@ -1,43 +1,50 @@
 """
 JigsawPiece Module - Individual Puzzle Elements
-Defines the visual representation and state handling for puzzle pieces.
+Handles high-precision rendering and visual edge blending.
 """
 
 from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsItem
-from PySide6.QtGui import QPen
+from PySide6.QtGui import QPainter, QPen, QColor
 from PySide6.QtCore import Qt
+
 import config
 
 class JigsawPiece(QGraphicsPixmapItem):
-    """
-    Graphics item representing a single puzzle piece.
-    Maintains information about its origin, cluster connectivity, and lock state.
-    """
-    def __init__(self, pixmap, row: int, col: int, correct_pos, drawn_path):
+    def __init__(self, pixmap, row, col, correct_pos, mask_path):
         super().__init__(pixmap)
         self.row = row
         self.col = col
-        self.correct_pos = correct_pos  # Target scene position for snapping
-        self.drawn_path = drawn_path    # Vector path for selection highlights
-        
-        # Interaction Flags
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
+        self.correct_pos = correct_pos
+        self.mask_path = mask_path
         
         self.is_locked = False
         self.is_in_tray = True
-        self.cluster = [self]      # List of pieces snapped together
+        self.cluster = [self] 
+        self.tray_scale = 1.0 
         
-        self.tray_scale = 0.25      # Scale when residing in the bottom tray
-        self.snap_threshold = config.SNAP_THRESHOLD
-        
-        # High-quality rendering hint
-        self.setTransformationMode(Qt.TransformationMode.SmoothTransformation)
+        self.setFlags(QGraphicsItem.GraphicsItemFlag.ItemIsMovable |
+                     QGraphicsItem.GraphicsItemFlag.ItemIsSelectable |
+                     QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
 
-    def paint(self, painter, option, widget):
-        """Custom paint implementation to draw selection borders."""
-        super().paint(painter, option, widget)
-        if self.isSelected() and not self.is_locked:
-            painter.setPen(QPen(config.SELECTION_COLOR, 3))
-            painter.drawPath(self.drawn_path)
+    def paint(self, painter, option, widget=None):
+        """Paints piece with AA-fringe mitigation for seamless blending."""
+        # Enable high-quality rendering
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform)
+        
+        # 1. Apply Mask
+        painter.setClipPath(self.mask_path)
+        
+        # 2. Draw Pixmap with slight 'bleed' protection
+        # We draw the full pixmap area; clipping defines the edge.
+        painter.drawPixmap(0, 0, self.pixmap())
+        
+        # 3. Seamless Blending: REMOVE BORDER FOR LOCKED PIECES
+        # If a piece is locked, we want ZERO edge artifacts.
+        # Anti-aliasing edges can cause 1px gaps if a pen is drawn.
+        if not self.is_locked and not self.isSelected():
+            # Only draw a VERY faint guide for unfitted pieces to help visibility
+            painter.setPen(QPen(QColor(255, 255, 255, 20), 0.5))
+            painter.drawPath(self.mask_path)
+        
+        # Selection highlight is handled by the ClusterHighlightItem in the board scene
