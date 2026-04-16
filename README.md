@@ -1,4 +1,4 @@
-# <img src="icon.png" width="48" height="48"> Jigsaw Qt - Casual Puzzle Game
+# <img src="io.github.hthienloc.JigsawQt.png" width="48" height="48"> Jigsaw Qt - Casual Puzzle Game
 
 Jigsaw Qt is a simple, window-responsive jigsaw puzzle application built with **Python 3** and **PySide6**. It provides a clean, easy-to-play gaming experience for casual puzzle lovers on the Linux desktop.
 

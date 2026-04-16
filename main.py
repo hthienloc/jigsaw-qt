@@ -8,7 +8,7 @@ import os
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QPushButton, QFileDialog, QGraphicsView, 
                              QLabel, QFrame, QComboBox)
-from PySide6.QtGui import QColor, QPalette, QPainter, QWheelEvent, QGuiApplication
+from PySide6.QtGui import QColor, QPalette, QPainter, QWheelEvent, QGuiApplication, QIcon
 from PySide6.QtCore import Qt, QRectF
 
 import config
@@ -55,6 +55,17 @@ class JigsawApp(QMainWindow):
         
         self.scene = JigsawBoard()
         self.scene.on_completion_changed = self.update_progress
+        
+        # Set Window Icon
+        icon_path = os.path.join(os.path.dirname(__file__), "io.github.hthienloc.JigsawQt.png")
+        if not os.path.exists(icon_path):
+            # Fallback for Flatpak or system installation
+            icon_path = "/app/share/icons/hicolor/scalable/apps/io.github.hthienloc.JigsawQt.png"
+        
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+        elif QIcon.hasThemeIcon("io.github.hthienloc.JigsawQt"):
+            self.setWindowIcon(QIcon.fromTheme("io.github.hthienloc.JigsawQt"))
         
         central = QWidget()
         self.setCentralWidget(central)

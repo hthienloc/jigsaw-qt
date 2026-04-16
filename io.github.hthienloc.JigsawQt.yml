@@ -20,6 +20,7 @@ modules:
       - install -D config.py /app/bin/config.py
       - install -D io.github.hthienloc.JigsawQt.desktop /app/share/applications/io.github.hthienloc.JigsawQt.desktop
       - install -D io.github.hthienloc.JigsawQt.metainfo.xml /app/share/metainfo/io.github.hthienloc.JigsawQt.metainfo.xml
+      - install -D io.github.hthienloc.JigsawQt.png /app/share/icons/hicolor/scalable/apps/io.github.hthienloc.JigsawQt.png
     sources:
       - type: dir
         path: .
