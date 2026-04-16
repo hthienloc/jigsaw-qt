@@ -34,7 +34,7 @@ class ClusterHighlightItem(QGraphicsItem):
             p_path = p.mapToScene(p.mask_path)
             path = path.united(self.mapFromScene(p_path))
         painter.setRenderHint(QPainter.Antialiasing)
-        pen = QPen(config.SELECTION_COLOR, 3) # Clean cyan glow
+        pen = QPen(config.theme.SELECTION_COLOR, 3) # Clean cyan glow
         pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
         painter.setPen(pen)
         painter.drawPath(path)
@@ -52,20 +52,36 @@ class JigsawBoard(QGraphicsScene):
         self.preview_item = None
         self.tray_scroll_offset = 0
         
+        self.on_completion_changed = None
+        self.is_hint_active = False
+        self.is_edge_filter_active = False
+        self.debug_mode = False
+        
         self.creation_w = config.DEFAULT_WIDTH
         self.creation_h = config.DEFAULT_HEIGHT
+        
+        self.target_piece_count = config.TARGET_PIECE_COUNT
+        self.last_image_path = None
 
-    def load_image(self, image_path: str):
+    def load_image(self, image_path: str, piece_count=None):
+        if piece_count: self.target_piece_count = piece_count
         img_obj = QImage(image_path)
         if img_obj.isNull(): return
         self.original_image = img_obj
+        self.last_image_path = image_path
         img_aspect = self.original_image.width() / self.original_image.height()
-        self.rows = max(2, round(math.sqrt(config.TARGET_PIECE_COUNT / img_aspect)))
-        self.cols = max(2, round(config.TARGET_PIECE_COUNT / self.rows))
+        self.rows = max(2, round(math.sqrt(self.target_piece_count / img_aspect)))
+        self.cols = max(2, round(self.target_piece_count / self.rows))
         
         if self.width() > 0:
             self.creation_w, self.creation_h = self.width(), self.height()
         self._create_puzzle(self.creation_w, self.creation_h)
+        self.update()
+
+    def reload_current(self):
+        """Reloads the current puzzle with existing settings (useful for difficulty change)."""
+        if self.last_image_path:
+            self.load_image(self.last_image_path)
 
     def _create_puzzle(self, w, h):
         self.clear()
@@ -129,7 +145,8 @@ class JigsawBoard(QGraphicsScene):
         self.preview_item.hide(); self.addItem(self.preview_item)
         
         self.highlight_item = ClusterHighlightItem([]); self.addItem(self.highlight_item)
-        self._repack_tray()
+        self.shuffle_tray()
+        self.update()
 
     def update_layout(self, w, h):
         if w <= 0 or not self.pieces: return
@@ -176,23 +193,97 @@ class JigsawBoard(QGraphicsScene):
             self.tray_scroll_offset = max(-max_scroll, min(0, self.tray_scroll_offset))
         self._repack_tray()
 
-    def show_preview(self):
+    def show_preview(self, hover=True):
         if self.preview_item: 
-            self.preview_item.setOpacity(1.0); self.preview_item.show()
-            for p in self.pieces: p.hide()
+            if hover:
+                self.preview_item.setOpacity(1.0); self.preview_item.show()
+                for p in self.pieces: p.hide()
+            else:
+                self.is_hint_active = True
+                self.preview_item.setOpacity(config.HINT_OPACITY); self.preview_item.show()
+                self.preview_item.setZValue(-1) # Behind everything
 
-    def hide_preview(self):
+    def hide_preview(self, hover=True):
         if self.preview_item: 
-            self.preview_item.hide()
-            for p in self.pieces: p.show()
+            if hover:
+                self.preview_item.hide()
+                for p in self.pieces: p.show()
+                if self.is_hint_active: self.show_preview(hover=False)
+            else:
+                self.is_hint_active = False
+                self.preview_item.hide()
+
+    def toggle_hint(self):
+        if self.is_hint_active: self.hide_preview(hover=False)
+        else: self.show_preview(hover=False)
+
+    def toggle_edge_filter(self):
+        self.is_edge_filter_active = not self.is_edge_filter_active
+        self._repack_tray()
+
+    def return_unlocked_to_tray(self):
+        """Moves all pieces that are not snapped to the board back into the tray."""
+        for p in self.pieces:
+            if not p.is_locked:
+                p.is_in_tray = True
+                p.setScale(p.tray_scale)
+        self._repack_tray()
+
+    def shuffle_tray(self):
+        tray_pieces = [p for p in self.pieces if p.is_in_tray and not p.is_locked]
+        random.shuffle(tray_pieces)
+        # We need to maintain the shuffle order across repacks
+        # Let's adjust the indices or just re-insert into self.pieces?
+        # Actually, self.pieces order is used for tray rendering.
+        locked = [p for p in self.pieces if p.is_locked]
+        rest = [p for p in self.pieces if not p.is_locked]
+        # Sort rest so tray pieces come in random order but they are all in self.pieces
+        tp = [p for p in rest if p.is_in_tray]
+        bp = [p for p in rest if not p.is_in_tray]
+        random.shuffle(tp)
+        self.pieces = locked + bp + tp
+        self._repack_tray()
+
+    def get_completion_percentage(self):
+        if not self.pieces: return 0
+        locked_count = sum(1 for p in self.pieces if p.is_locked)
+        return int((locked_count / len(self.pieces)) * 100)
 
     def _repack_tray(self):
         tray_pieces = [p for p in self.pieces if p.is_in_tray and not p.is_locked]
+        
+        if self.is_edge_filter_active:
+            for p in tray_pieces:
+                is_edge = (p.row == 0 or p.row == self.rows-1 or 
+                           p.col == 0 or p.col == self.cols-1)
+                p.setVisible(is_edge)
+            # Only count visible pieces for layout
+            visible_tray = [p for p in tray_pieces if p.isVisible()]
+        else:
+            for p in tray_pieces: p.setVisible(True)
+            visible_tray = tray_pieces
+
         start_x = config.TRAY_START_X + self.tray_scroll_offset
-        y_pos = self.tray_rect.top() + (self.tray_rect.height() * config.TRAY_PIECE_Y_OFFSET)
-        for i, p in enumerate(tray_pieces):
-            p.setPos(start_x + i * config.TRAY_SLOT_WIDTH, y_pos)
+        slot_h = self.tray_rect.height()
+        
+        for i, p in enumerate(visible_tray):
+            # Dynamic horizontal and vertical centering
+            item_w = p.boundingRect().width() * p.tray_scale
+            item_h = p.boundingRect().height() * p.tray_scale
+            h_offset = (config.TRAY_SLOT_WIDTH - item_w) / 2
+            v_offset = (slot_h - item_h) / 2
+            
+            p.setPos(start_x + i * config.TRAY_SLOT_WIDTH + h_offset, self.tray_rect.top() + v_offset)
             p.setScale(p.tray_scale)
+
+    def drawForeground(self, painter, rect):
+        if not self.debug_mode: return
+        painter.setPen(QPen(Qt.GlobalColor.red, 1))
+        painter.setFont(config.DEBUG_FONT if hasattr(config, 'DEBUG_FONT') else painter.font())
+        for p in self.pieces:
+            br = p.sceneBoundingRect()
+            painter.drawRect(br)
+            painter.drawText(br.topLeft() + QPointF(5, 15), f"ID: {p.row},{p.col}")
 
     def mousePressEvent(self, event):
         pos = event.scenePos()
@@ -218,25 +309,39 @@ class JigsawBoard(QGraphicsScene):
             if isinstance(item, JigsawPiece) and not item.is_locked:
                 cid = id(item.cluster)
                 if cid in moved_clusters: continue
-                if item.y() < self.tray_rect.top() - 20 and item.is_in_tray:
+                if item.y() > self.tray_rect.top() - 10 and not item.is_in_tray:
+                    # ONLY solo pieces can return to tray
+                    if len(item.cluster) == 1:
+                        for p in item.cluster: p.setScale(p.tray_scale); p.is_in_tray = True
+                        self._repack_tray()
+                elif item.y() < self.tray_rect.top() - 40 and item.is_in_tray:
                     for p in item.cluster: p.setScale(1.0); p.is_in_tray = False
                     self._repack_tray()
-                elif item.y() > self.tray_rect.top() and not item.is_in_tray:
-                    for p in item.cluster: p.setScale(p.tray_scale); p.is_in_tray = True
-                    self._repack_tray()
+                
                 for other in item.cluster:
                     if other != item: other.setPos(item.pos() + (other.correct_pos - item.correct_pos))
                 moved_clusters.add(cid)
 
     def mouseReleaseEvent(self, event):
-        super().mouseReleaseEvent(event)
+        if event: super().mouseReleaseEvent(event)
         for item in self.selectedItems():
             if isinstance(item, JigsawPiece) and not item.is_locked:
                 if (item.pos() - item.correct_pos).manhattanLength() < config.SNAP_THRESHOLD:
                     self._snap_piece_to_board(item)
                     continue
                 for other in self.pieces:
-                    if other == item or other.is_in_tray: continue
+                    if other in item.cluster or other.is_in_tray: continue
+                    
+                    # LOGICAL ADJACENCY CHECK: Only snap if they are grid neighbors
+                    is_logically_adjacent = False
+                    for p in item.cluster:
+                        for o in other.cluster:
+                            if abs(p.row - o.row) + abs(p.col - o.col) == 1:
+                                is_logically_adjacent = True; break
+                        if is_logically_adjacent: break
+                    
+                    if not is_logically_adjacent: continue
+
                     rel = item.correct_pos - other.correct_pos
                     if (item.pos() - (other.pos() + rel)).manhattanLength() < config.SNAP_THRESHOLD:
                         item.setPos(other.pos() + rel)
@@ -245,6 +350,7 @@ class JigsawBoard(QGraphicsScene):
                             for p in new_c: p.cluster = new_c
                         if other.is_locked: self._snap_piece_to_board(item)
                         break
+        self._repack_tray()
         self._update_highlight_pos()
 
     def _update_highlight_pos(self):
@@ -256,20 +362,32 @@ class JigsawBoard(QGraphicsScene):
             p.setPos(p.correct_pos); p.is_locked = True
             p.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
             p.setZValue(config.LOCKED_Z_VALUE); p.is_in_tray = False; p.setScale(1.0)
+            p.pulse()
         if self.highlight_item: self.highlight_item.setVisible(False)
+        if self.on_completion_changed: self.on_completion_changed()
         self.check_win()
 
     def check_win(self):
-        if all(p.is_locked for p in self.pieces): print("Winner!")
+        if all(p.is_locked for p in self.pieces):
+            self._show_completion_image()
+            if self.on_completion_changed: self.on_completion_changed() # Trigger final progress update if needed
+
+    def _show_completion_image(self):
+        """Shows the original image at full opacity to celebrate completion and hide edges."""
+        if self.preview_item:
+            self.preview_item.setOpacity(1.0)
+            self.preview_item.setZValue(2000) # Above everything
+            self.preview_item.show()
+            for p in self.pieces: p.hide()
 
     def drawBackground(self, painter, rect):
-        painter.fillRect(rect, config.BG_COLOR)
-        painter.fillRect(self.board_rect, config.BOARD_AREA_BG)
-        painter.fillRect(self.tray_rect, config.TRAY_BG_COLOR)
-        painter.setPen(QPen(config.SEPARATOR_COLOR, 2))
+        painter.fillRect(rect, config.theme.BG_COLOR)
+        painter.fillRect(self.board_rect, config.theme.BOARD_AREA_BG)
+        painter.fillRect(self.tray_rect, config.theme.TRAY_BG_COLOR)
+        painter.setPen(QPen(config.theme.SEPARATOR_COLOR, 2))
         painter.drawLine(0, self.tray_rect.top(), self.sceneRect().width(), self.tray_rect.top())
         if self.preview_item:
             pr = self.preview_item.pixmap().rect()
             guide_rect = QRectF(self.preview_item.pos().x(), self.preview_item.pos().y(), pr.width(), pr.height())
-            painter.setPen(QPen(config.GUIDE_COLOR, 2, Qt.PenStyle.DashLine))
+            painter.setPen(QPen(config.theme.GUIDE_COLOR, 2, Qt.PenStyle.DashLine))
             painter.drawRect(guide_rect)

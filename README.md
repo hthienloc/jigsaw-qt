@@ -11,8 +11,20 @@ Jigsaw Qt is a simple, window-responsive jigsaw puzzle application built with **
   - **Mouse Wheel**: Natural horizontal scrolling for the bottom piece tray.
 - **Smart Snapping**: Pieces snap to their correct board positions and neighboring pieces with customizable thresholds.
 - **Cluster Merging**: Moving one piece automatically moves all connected (snapped) pieces as a single cluster.
-- **Guide View**: Hold the "Guide View" button to see the full reference image for help.
+- **Hint Overlay**: Toggle a faint reference image under the board to guide your build.
+- **Edge Piece Filter**: Quickly focus on the border by hiding inner pieces in the tray.
+- **Shuffle Tray**: Reshuffle pieces in the tray to find the right fit.
+- **Completion Tracking**: Real-time progress bar shows how close you are to finishing.
+- **Visual Feedback**: Satisfying pulse glow effect when a piece snaps into place.
 - **Premium Aesthetics**: Deep dark mode theme with glassmorphism-inspired button states and smooth animations.
+
+## ⌨️ Shortcuts
+
+- **H**: Toggle Hint Overlay
+- **E**: Toggle Edge Piece Filter
+- **S**: Shuffle Tray
+- **Space (Hold)**: View full reference image (Guide)
+- **F12**: Toggle Debug Mode (Developer only)
 
 ## 🚀 Getting Started
 
