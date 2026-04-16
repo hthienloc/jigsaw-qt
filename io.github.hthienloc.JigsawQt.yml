@@ -8,8 +8,10 @@ finish-args:
   - --socket=fallback-x11
   - --socket=wayland
   - --device=dri
-  - --share=network
-  - --filesystem=home
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
 modules:
   - name: jigsaw-qt
     buildsystem: simple
@@ -18,6 +20,7 @@ modules:
       - install -D board.py /app/bin/board.py
       - install -D piece.py /app/bin/piece.py
       - install -D config.py /app/bin/config.py
+      - install -D LICENSE /app/share/licenses/io.github.hthienloc.JigsawQt/LICENSE
       - install -D io.github.hthienloc.JigsawQt.desktop /app/share/applications/io.github.hthienloc.JigsawQt.desktop
       - install -D io.github.hthienloc.JigsawQt.metainfo.xml /app/share/metainfo/io.github.hthienloc.JigsawQt.metainfo.xml
       - install -D io.github.hthienloc.JigsawQt.png /app/share/icons/hicolor/scalable/apps/io.github.hthienloc.JigsawQt.png
